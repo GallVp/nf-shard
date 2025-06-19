@@ -29,7 +29,7 @@ Following instructions allows to run `nf-shard` locally. Make sure [`Docker`](ht
 ### Method 1 - `bash` 1-liner
 
 ```bash
-
+curl -s https://raw.githubusercontent.com/GallVp/nf-shard/refs/heads/main/nf-shard-deploy-local.sh | bash
 ```
 
 ### Method 2 - docker-compose
