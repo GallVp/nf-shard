@@ -1,6 +1,6 @@
-![build badge](https://github.com/AugustDev/nf-shard/actions/workflows/ci.yml/badge.svg)
-![version badge](https://ghcr-badge.deta.dev/augustdev/nf-shard/latest_tag?color=%236d52f4&ignore=latest&label=version&trim=)
-![size badge](https://ghcr-badge.deta.dev/augustdev/nf-shard/size?color=%23fa0092&tag=latest&label=image+size&trim=)
+[![Build](https://github.com/GallVp/nf-shard/actions/workflows/ci.yml/badge.svg)](https://github.com/GallVp/nf-shard/actions/workflows/ci.yml)
+![Version badge](https://ghcr-badge.egpl.dev/GallVp/nf-shard/latest_tag?color=%236d52f4&ignore=latest&label=Version&trim=)
+![Size badge](https://ghcr-badge.egpl.dev/GallVp/nf-shard/size?color=%23fa0092&tag=latest&label=Image+size&trim=)
 
 ![nf-shard Logo](./assets/logo.png)
 
@@ -24,14 +24,18 @@ tower {
 
 ## Run
 
-Following instructions allows to run `nf-shard` locally. To run nf-shard you PostgreSQL database.
+Following instructions allows to run `nf-shard` locally. Make sure [`Docker`](https://docs.docker.com/engine/install/) and [`docker-compose`](https://docs.docker.com/compose/install/linux/) are already installed.
 
-### Method 1 - docker-compose
-
-docker-compose will spin up PostgreSQL database and the server.
+### Method 1 - `bash` 1-liner
 
 ```bash
-git clone git@github.com:AugustDev/nf-shard.git
+
+```
+
+### Method 2 - docker-compose
+
+```bash
+git clone git@github.com:GallVp/nf-shard.git
 cd nf-shard
 docker-compose --profile all up
 ```
@@ -39,7 +43,7 @@ docker-compose --profile all up
 If you have PostgreSQL running externally then you only need to launch the server. In this case update your `.env` with `POSTGRES_URI` and run
 
 ```bash
-git clone git@github.com:AugustDev/nf-shard.git
+git clone git@github.com:GallVp/nf-shard.git
 cd nf-shard
 docker-compose --profile server up
 ```
@@ -58,7 +62,7 @@ Done! If you navigate to `http://localhost:3000` and run Nextflow workflow you s
 
 Note - `accessToken` can by any non-empty string.
 
-### Method 2 - yarn
+### Method 3 - yarn
 
 If you already have running PostgreSQL database, you can run build the project using yarn package manager. To specify your database login edit `.env`. If you are developer you would prefer using this approach.
 
@@ -69,27 +73,19 @@ yarn build
 yarn run
 ```
 
-Not that `yarn migrate` requires connection to databse, so you should update `.env` file.
+Not that `yarn migrate` requires connection to the database, so you should update `.env` file.
 
 To run PostgreSQL for local development you can use
 
-```
+```bash
 docker-compose --profile db up
 ```
 
 Since connection to PostgreSQL now happens outside of docker, you should update your `.env` to specify `localhost`
 
+```bash
+POSTGRES_URI=postgresql://postgres:postgres@localhost:5432/postgres?schema=public
 ```
-POSTGRES_URI=postgresql://postgres:yourpassword@localhost:5432/postgres?schema=public
-```
-
-### Method 3 - Vercel
-
-One click deployment using Vercel requires having PostgreSQL access. Video instructions below. In the video I use [Neon.tech](https://neon.tech/) free PostgreSQL version, but any provider works.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAugustDev%2Fnf-shard%2F&env=POSTGRES_URI&project-name=nf-shard&repository-name=nf-shard&demo-title=nf-shard&demo-description=Monitor%20Nextlfow%20pipelines.%20Group%20runs%20into%20workspaces&demo-url=https%3A%2F%2Fmain.d29s1tosoaghp.amplifyapp.com%2F&build-command=yarn%20generate%20%26%26%20yarn%20build%20%26%26%20npx%20prisma%20migrate%20deploy&output-directory=build)
-
-[![Foo](./assets/vercel-deployment.png)](https://www.youtube.com/watch?v=luqc2vmKvKY)
 
 ## Stack
 
