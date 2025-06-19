@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Export the project name for docker compose
+export COMPOSE_PROJECT_NAME="nf-shard"
+
 # Ensure that docker is installed
 if ! command -v docker &> /dev/null; then
 	echo "Docker is required to deploy nf-shard locally"
@@ -14,10 +17,14 @@ fi
 
 POSTGRES_PASSWORD=postgres
 POSTGRES_URI=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres?schema=public
+FORCE=0
 
 # Optionally, get the Postgresql password as a command line argument -p
-while getopts "p:" opt; do
+while getopts "fp:" opt; do
     case ${opt} in
+		f )
+        FORCE=1
+        ;;
     p )
         POSTGRES_PASSWORD="$OPTARG"
         ;;
@@ -29,8 +36,48 @@ while getopts "p:" opt; do
 done
 shift $((OPTIND -1))
 
+# Check for existing containers and volumes
+if [ $FORCE -eq 0 ] && \
+		$(docker ps -q --filter "name=nf-shard-nextjs" | grep -q . || \
+			docker ps -q --filter "name=nf-shard-postgres" | grep -q . || \
+			docker volume ls -q --filter name=nf_shard_postgres_data | grep -q .); then
+	
+	echo "nf-shard is already deployed. Use -f to force redeployment."
+	exit 0
+elif [ $FORCE -eq 1 ]; then
+	echo "Stopping and removing existing nf-shard containers..."
+	
+	if docker ps -q --filter "name=nf-shard-nextjs" | grep -q .; then
+		docker stop nf-shard-nextjs
+		docker rm nf-shard-nextjs
+	fi
+
+	if docker ps -q --filter "name=nf-shard-postgres" | grep -q .; then
+		docker stop nf-shard-postgres
+		docker rm nf-shard-postgres
+	fi
+
+	if docker volume ls -q --filter name=nf-shard_postgres-data | grep -q .; then
+		docker volume rm nf-shard_postgres-data
+	fi
+fi
+
+# Create entry point
+mkdir -p ./docker
+cat <<EOF > ./docker/entrypoint.sh
+#!/bin/sh
+
+# deploy migrations
+npx prisma migrate deploy
+
+# run server
+node server.js
+EOF
+
+chmod +x ./docker/entrypoint.sh
+
 # Run docker compose
-docker compose -f - --profile all up <<EOF
+docker compose -f - --profile all up --wait <<EOF
 version: "3.7"
 
 services:
@@ -68,3 +115,7 @@ volumes:
   postgres-data:
 EOF
 
+
+sleep 20
+
+echo -e "\nnf-shard deployed locally at http://localhost:3000"
