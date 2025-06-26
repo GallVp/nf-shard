@@ -23,7 +23,7 @@ export const Main = (props: TMainProps) => {
 
 		let config = []
 		config.push("enabled = true")
-		config.push(`accessToken = "x"`)
+		config.push(`accessToken = 032e6cde-c4a539f8-57e4aea1-95ea67f1`)
 		config.push(`endpoint = "${baseUrl}/api"`)
 		if (selectedWorkspace.id !== 0) {
 			config.push(`workspaceId = "${selectedWorkspace.id}"`)
