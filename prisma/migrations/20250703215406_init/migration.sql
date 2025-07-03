@@ -1,5 +1,3 @@
-CREATE EXTENSION pg_trgm;
-
 -- CreateTable
 CREATE TABLE "Workflow" (
     "id" TEXT NOT NULL,
@@ -10,7 +8,7 @@ CREATE TABLE "Workflow" (
     "profile" TEXT NOT NULL,
     "homeDir" TEXT NOT NULL,
     "workDir" TEXT NOT NULL,
-    "container" TEXT NOT NULL,
+    "container" TEXT,
     "commitId" TEXT,
     "errorMessage" TEXT,
     "repository" TEXT,
@@ -27,7 +25,7 @@ CREATE TABLE "Workflow" (
     "commandLine" TEXT NOT NULL,
     "stubRun" BOOLEAN NOT NULL,
     "nextflow" JSONB NOT NULL,
-    "stats" JSONB NOT NULL,
+    "stats" JSONB,
     "resume" BOOLEAN NOT NULL,
     "success" BOOLEAN NOT NULL,
     "projectName" TEXT NOT NULL,
@@ -44,8 +42,18 @@ CREATE TABLE "Workflow" (
     "metrics" JSONB[],
     "searchable" TEXT,
     "tags" TEXT[],
+    "workspaceId" INTEGER,
 
     CONSTRAINT "Workflow_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Workspace" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "accessToken" TEXT NOT NULL,
+
+    CONSTRAINT "Workspace_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -85,11 +93,61 @@ CREATE TABLE "Task" (
     CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "Workflow_id_updatedAt_projectName_runName_userName_tags_idx" ON "Workflow"("id", "updatedAt", "projectName", "runName", "userName", "tags");
+-- CreateTable
+CREATE TABLE "AppSettings" (
+    "id" SERIAL NOT NULL,
+    "base_url" TEXT,
+    "slack_webhook_url" TEXT,
+    "slack_notification_events" TEXT[],
+    "slack_notifications_enabled" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "AppSettings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ComputeEnvironment" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "orchestrator_endpoint" TEXT NOT NULL,
+    "orchestrator_token" TEXT NOT NULL,
+    "executor" TEXT NOT NULL,
+
+    CONSTRAINT "ComputeEnvironment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Pipeline" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "github_url" TEXT NOT NULL,
+    "compute_overrides" JSONB,
+    "run_params" JSONB,
+
+    CONSTRAINT "Pipeline_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProcessKeys" (
+    "id" SERIAL NOT NULL,
+    "processKey" TEXT NOT NULL,
+    "executor" TEXT NOT NULL,
+    "runName" TEXT NOT NULL,
+    "computeEnvironmentId" INTEGER,
+
+    CONSTRAINT "ProcessKeys_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateIndex
-CREATE INDEX "searchable_idx" ON "Workflow" USING GIN ("searchable" gin_trgm_ops);
+CREATE INDEX "Workflow_id_updatedAt_projectName_runName_userName_tags_wor_idx" ON "Workflow"("id", "updatedAt", "projectName", "runName", "userName", "tags", "workspaceId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Workspace_name_key" ON "Workspace"("name");
+
+-- CreateIndex
+CREATE INDEX "Workspace_id_idx" ON "Workspace" USING HASH ("id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Progress_id_key" ON "Progress"("id");
@@ -106,8 +164,23 @@ CREATE INDEX "Task_taskId_workflowId_idx" ON "Task"("taskId", "workflowId");
 -- CreateIndex
 CREATE UNIQUE INDEX "Task_workflowId_taskId_key" ON "Task"("workflowId", "taskId");
 
--- AddForeignKey
-ALTER TABLE "Progress" ADD CONSTRAINT "Progress_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- CreateIndex
+CREATE UNIQUE INDEX "Pipeline_id_key" ON "Pipeline"("id");
+
+-- CreateIndex
+CREATE INDEX "ProcessKeys_runName_idx" ON "ProcessKeys"("runName");
 
 -- AddForeignKey
-ALTER TABLE "Task" ADD CONSTRAINT "Task_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Workflow" ADD CONSTRAINT "Workflow_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Progress" ADD CONSTRAINT "Progress_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Task" ADD CONSTRAINT "Task_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProcessKeys" ADD CONSTRAINT "ProcessKeys_computeEnvironmentId_fkey" FOREIGN KEY ("computeEnvironmentId") REFERENCES "ComputeEnvironment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- CreateExtension pg_trgm
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
