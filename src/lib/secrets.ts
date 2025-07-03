@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify, JWTPayload } from "jose"
+import { logger } from "./logger"
 
-const defaultTokenSecret = "032e6cde-c4a539f8-57e4aea1-95ea67f1"
+export const defaultTokenSecret = process.env.DEFAULT_ACCESS_TOKEN
 const appSecretKey = new TextEncoder().encode(process.env.APP_SECRET_KEY)
 const appSecretAlgorithm = "HS256"
 const userName = process.env.APP_USERNAME || "nf-shard"
@@ -9,8 +10,12 @@ const userPassword = process.env.APP_PASSWORD || "nf-shard"
 
 export async function verifyAPIToken(base64APIToken: string, address: string, workspaceId: string | null) {
 
+	if (!defaultTokenSecret) {
+		logger.warn('The default access token is not defined in the environment. Rejecting token verification!')
+		return null
+	}
+	
 	if (!workspaceId) {
-		
 		return verifyAPITokenAgainstTarget(base64APIToken, defaultTokenSecret)
 	}
 

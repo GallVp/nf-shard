@@ -11,6 +11,7 @@ const nextConfig = {
 		APP_SECRET_KEY: process.env.APP_SECRET_KEY,
 		APP_USERNAME: process.env.APP_USERNAME,
 		APP_PASSWORD: process.env.APP_PASSWORD,
+		DEFAULT_ACCESS_TOKEN: process.env.DEFAULT_ACCESS_TOKEN
 	},
 }
 
