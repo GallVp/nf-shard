@@ -12,8 +12,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-	title: "nf-tower - Monitor Nextlfow pipelines. Group runs into workspaces.",
-	description: "Monitor Nextlfow pipelines",
+	title: "nf-tower - Monitor Nextflow pipelines. Group runs into workspaces.",
+	description: "Monitor Nextflow pipelines",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

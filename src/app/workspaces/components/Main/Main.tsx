@@ -30,6 +30,14 @@ export const Main = (props: TWorkspaceProps) => {
 			cache: "no-store",
 		})
 
+		if (response.status === 409) {
+			const resJ = await response.json()
+			alert(
+				resJ.error
+			)
+			return
+		}
+
 		const workspaces: Workspace[] = await response.json()
 		if (workspaces) {
 			setWorkspaces(workspaces)
