@@ -1,15 +1,36 @@
 import { SignJWT, jwtVerify, JWTPayload } from "jose"
 
-const tokenSecret = "032e6cde-c4a539f8-57e4aea1-95ea67f1"
+const defaultTokenSecret = "032e6cde-c4a539f8-57e4aea1-95ea67f1"
 const appSecretKey = new TextEncoder().encode(process.env.APP_SECRET_KEY)
 const appSecretAlgorithm = "HS256"
 const userName = process.env.APP_USERNAME || "nf-shard"
 const userPassword = process.env.APP_PASSWORD || "nf-shard"
 
-export function verifyBasicToken(token: string) {
+
+export async function verifyAPIToken(base64APIToken: string, address: string, workspaceId: string | null) {
+
+	if (!workspaceId) {
+		
+		return verifyAPITokenAgainstTarget(base64APIToken, defaultTokenSecret)
+	}
+
+	const res = await fetch(`${address}/api/auth`, {
+		body: JSON.stringify({ workspaceId: workspaceId, base64APIToken: base64APIToken }),
+		method: "POST",
+		cache: "no-store",
+	})
+
+	if (res.ok) {
+		return true
+	}
+
+	return null
+}
+
+export async function verifyAPITokenAgainstTarget(base64APIToken: string, targetToken: string) {
 	try {
-		const decodedToken = Buffer.from(token.trim(), 'base64').toString('utf-8').trim()
-		return decodedToken == tokenSecret || decodedToken == `@token:${tokenSecret}`
+		const decodedToken = Buffer.from(base64APIToken.trim(), 'base64').toString('utf-8').trim()
+		return decodedToken == targetToken || decodedToken == `@token:${targetToken}`
 	} catch (e) {
 		return null
 	}

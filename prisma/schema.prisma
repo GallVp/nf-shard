@@ -71,9 +71,10 @@ model Workflow {
 }
 
 model Workspace {
-  id        Int        @id @default(autoincrement())
-  name      String
-  workflows Workflow[]
+  id          Int        @id @default(autoincrement())
+  name        String
+  accessToken String
+  workflows   Workflow[]
 
   @@index([id], type: Hash)
 }

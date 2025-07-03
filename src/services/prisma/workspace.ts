@@ -17,16 +17,24 @@ export const deleteWorkspace = async (id: number) => {
 	})
 }
 
-export const createWorkspace = async (name: string) => {
+export const createWorkspace = async (name: string, accessToken: string) => {
 	await prisma.workspace.create({
 		data: {
 			name: name,
+			accessToken: accessToken
 		},
 	})
 }
 
 export const getAllWorkspaces = async () => {
-	return await prisma.workspace.findMany()
+	// Obfuscate the token
+	return (await prisma.workspace.findMany()).map((workspace) => {
+		return {
+			id: workspace.id,
+			name: workspace.name,
+			accessToken: "xxxxxxxxxxxxxxxx"
+		}
+	})
 }
 
 export const GetWorkspaceById = async (id: number) => {
