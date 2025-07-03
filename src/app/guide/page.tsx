@@ -1,6 +1,7 @@
 import { Main } from "./components"
 import { Workspace } from "@prisma/client"
 import { getAllWorkspaces } from "@/services/prisma"
+import { defaultTokenSecret } from "@/lib/secrets"
 
 export default async function Page() {
 	const props = await getData()
@@ -17,7 +18,7 @@ const getData = async () => {
 	}
 
 	return {
-		workspaces: workspaces,
+		workspaces: [{ id: 0, name: "Default", accessToken: defaultTokenSecret || 'Token is not set. The default workspace is locked!' }, ...workspaces],
 	}
 }
 
