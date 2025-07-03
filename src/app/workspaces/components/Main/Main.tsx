@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Modal } from "@/app/components"
 import { stringToColour } from "@/common"
 import Link from "next/link"
+import { ClipboardIcon } from '@heroicons/react/24/outline'
 
 type TWorkspaceProps = {
 	workspaces: Workspace[]
@@ -16,6 +17,7 @@ export const Main = (props: TWorkspaceProps) => {
 	const [openCreateModal, setOpenCreateModal] = useState<boolean>(false)
 	const [deleteWorkspaceModal, setDeleteWorkspaceModal] = useState<number | undefined>(undefined)
 	const [newWorkspaceName, setNewWorkspaceName] = useState<string>("")
+	const [newWorkspaceToken, setNewWorkspaceToken] = useState<string>("")
 
 	const createWorkspace = async () => {
 		if (newWorkspaceName.length === 0) {
@@ -23,7 +25,7 @@ export const Main = (props: TWorkspaceProps) => {
 		}
 
 		const response = await fetch(`/api/workspaces/create`, {
-			body: JSON.stringify({ name: newWorkspaceName }),
+			body: JSON.stringify({ name: newWorkspaceName, accessToken: newWorkspaceToken }),
 			method: "POST",
 			cache: "no-store",
 		})
@@ -49,6 +51,39 @@ export const Main = (props: TWorkspaceProps) => {
 		setDeleteWorkspaceModal(undefined)
 	}
 
+	const onClickAddWorkspace = async () => {
+		setNewWorkspaceToken(await createAccessToken())
+		setOpenCreateModal(true)
+	}
+
+	const onClickCopyToken = async () => {
+		navigator.clipboard.writeText(newWorkspaceToken)
+	}
+
+	const createAccessToken = async () => {
+		const dateNow = new Date()
+		const md5 = await md5Hex(dateNow.toISOString())
+		return formatMd5(md5)
+	}
+
+	const md5Hex = async (str: string): Promise<string> => {
+		const encoder = new TextEncoder()
+		const data = encoder.encode(str)
+		const hashBuffer = await window.crypto.subtle.digest("SHA-256", data)
+		const hashArray = Array.from(new Uint8Array(hashBuffer))
+		const hex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("")
+		return hex
+	}
+
+	const formatMd5 = (md5: string): string => {
+		return [
+			md5.slice(0, 16),
+			md5.slice(16, 32),
+			md5.slice(32, 48),
+			md5.slice(48, 64)
+		].join("-")
+	}
+
 	return (
 		<>
 			<Container sectionName="Workspaces">
@@ -66,7 +101,7 @@ export const Main = (props: TWorkspaceProps) => {
 							<button
 								type="button"
 								className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-								onClick={() => setOpenCreateModal(true)}
+								onClick={onClickAddWorkspace}
 							>
 								Add Workspace
 							</button>
@@ -131,28 +166,57 @@ export const Main = (props: TWorkspaceProps) => {
 				}}
 			>
 				<div>
-					<div className="text-center">
-						<div className="mt-2 text-left">
-							<p className="text-dm text-black">Enter new Workspace name</p>
+					<div className="text-center grid grid-cols-8 gap-4">
+
+						<div className="text-left col-span-8">
+							<p className="text-sm text-black">Enter new Workspace name</p>
 						</div>
-						<div className="sm:col-span-2">
-							<div className="mt-4">
-								<input
-									type="text"
-									name="company"
-									id="company"
-									className="block w-full rounded-md border-gray-300 text-black shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-									onChange={(e) => setNewWorkspaceName(e.target.value)}
-								/>
-							</div>
+
+						<div className="col-span-8">
+							<input
+								type="text"
+								name="company"
+								id="company"
+								className="p-1 block w-full rounded border-gray-300 text-black shadow focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2"
+								onChange={(e) => setNewWorkspaceName(e.target.value)}
+							/>
 						</div>
+
+						<div className="text-left col-span-8">
+							<p className="text-sm text-black">Copy the workspace token</p>
+							<p className="text-xs text-black">⚠️ The token will disappear forever with this window</p>
+						</div>
+
+						<div className="col-span-7">
+							<input
+								type="text"
+								name="token"
+								id="token"
+								className="p-1 block w-full bg-gray-200 rounded border-gray-300 text-black shadow text-sm px-2"
+								readOnly
+								disabled
+								value={newWorkspaceToken}
+							/>
+						</div>
+
+						<div className="col-span-1">
+							<button
+								className="p-1 inline-flex rounded text-gray-600 hover:text-white hover:bg-indigo-600 transition"
+								title="Copy"
+								onClick={onClickCopyToken}
+							>
+								<ClipboardIcon className="h-5 w-5" />
+							</button>
+						</div>
+
 					</div>
 				</div>
+
 				<div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
 					<button
 						type="button"
 						className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
-						onClick={() => createWorkspace()}
+						onClick={createWorkspace}
 					>
 						Create
 					</button>
@@ -183,7 +247,7 @@ export const Main = (props: TWorkspaceProps) => {
 					<button
 						type="button"
 						className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-						onClick={() => deleteWorkspace()}
+						onClick={deleteWorkspace}
 					>
 						Delete Workspace
 					</button>

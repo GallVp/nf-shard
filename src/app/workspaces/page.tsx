@@ -1,6 +1,7 @@
 import { prisma } from "@/services"
 import { Workspace } from "@prisma/client"
 import { Main } from "./components"
+import { getAllWorkspaces } from "@/services/prisma"
 
 export default async function Page() {
 	const props = await getData()
@@ -15,13 +16,13 @@ type TWorkspaceProps = {
 const getData = async (): Promise<TWorkspaceProps> => {
 	let workspaces: Workspace[] = []
 	try {
-		workspaces = await prisma.workspace.findMany()
+		workspaces = await getAllWorkspaces()
 	} catch (e) {
 		console.error(e)
 	}
 
 	return {
-		workspaces: workspaces,
+		workspaces: workspaces
 	}
 }
 
