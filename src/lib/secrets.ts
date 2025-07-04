@@ -5,8 +5,7 @@ export const defaultTokenSecret = process.env.DEFAULT_ACCESS_TOKEN
 const appSecretKey = new TextEncoder().encode(process.env.APP_SECRET_KEY)
 const appSecretAlgorithm = "HS256"
 const userName = process.env.APP_USERNAME || "nf-shard"
-const userPassword = process.env.APP_PASSWORD || "nf-shard"
-
+const userPassword = process.env.APP_PASSWORD
 
 export async function verifyAPIToken(base64APIToken: string, address: string, workspaceId: string | null) {
 
@@ -63,6 +62,12 @@ export async function verifyJWT(token: string): Promise<any> {
 }
 
 export function verifyCredentials(username: string, password: string): boolean {
+
+	if (!userPassword) {
+		logger.warn('User password is not defined in the environment. Rejecting credential verification!')
+		return false
+	}
+
 	return username === userName && password === userPassword
 }
 
