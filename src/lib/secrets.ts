@@ -50,6 +50,9 @@ export async function createJWTFromCredentials(payload: JWTPayload): Promise<str
 }
 
 export async function verifyJWT(token: string): Promise<any> {
+
+	// Empty tokens are not supported by jwtVerify
+	// Error: DataError: Zero-length key is not supported
 	try {
 		const { payload } = await jwtVerify(token, appSecretKey, {
 			algorithms: [appSecretAlgorithm],
