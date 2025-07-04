@@ -21,6 +21,3 @@ const getData = async () => {
 		workspaces: [{ id: 0, name: "Default", accessToken: defaultTokenSecret || 'Token is not set. The default workspace is locked!' }, ...workspaces],
 	}
 }
-
-export const fetchCache = "force-no-store"
-export const revalidate = 0

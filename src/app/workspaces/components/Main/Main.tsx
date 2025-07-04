@@ -7,6 +7,7 @@ import { Modal } from "@/app/components"
 import { stringToColour } from "@/common"
 import Link from "next/link"
 import { ClipboardIcon } from '@heroicons/react/24/outline'
+import { useRouter } from 'next/navigation'
 
 type TWorkspaceProps = {
 	workspaces: Workspace[]
@@ -18,6 +19,8 @@ export const Main = (props: TWorkspaceProps) => {
 	const [deleteWorkspaceModal, setDeleteWorkspaceModal] = useState<number | undefined>(undefined)
 	const [newWorkspaceName, setNewWorkspaceName] = useState<string>("")
 	const [newWorkspaceToken, setNewWorkspaceToken] = useState<string>("")
+
+	const router = useRouter()
 
 	const createWorkspace = async () => {
 		if (newWorkspaceName.length === 0) {
@@ -38,6 +41,7 @@ export const Main = (props: TWorkspaceProps) => {
 			return
 		}
 
+		router.refresh()
 		const workspaces: Workspace[] = await response.json()
 		if (workspaces) {
 			setWorkspaces(workspaces)
@@ -52,6 +56,7 @@ export const Main = (props: TWorkspaceProps) => {
 			cache: "no-store",
 		})
 
+		router.refresh()
 		const workspaces: Workspace[] = await response.json()
 		if (workspaces) {
 			setWorkspaces(workspaces)
