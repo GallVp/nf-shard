@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-trap "kill 0" EXIT
 
 yarn generate
 
@@ -11,7 +10,8 @@ yarn test:build
 
 yarn test:db
 
-yarn test:start & \
+yarn test:start &
 yarn wait-on http://localhost:3000
 
-yarn test:cypress:run
+yarn test:cypress:run \
+	&> >(tee cypress.test.log 2>&1)

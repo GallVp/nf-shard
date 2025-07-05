@@ -17,7 +17,7 @@
 		"test:start": "dotenv -e .env.test next start",
 		"test:cypress:run": "dotenv -e .env.test yarn cypress run",
 		"test:cypress:open": "dotenv -e .env.test yarn cypress open",
-		"test:cypress:all": "bash test/scripts/cypress_e2e.sh"
+		"test:cypress:all": "bash test/scripts/test_cypress_all.sh"
 	},
 	"dependencies": {
 		"@ant-design/cssinjs": "^1.17.2",

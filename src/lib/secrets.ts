@@ -35,7 +35,6 @@ export async function verifyAPIToken(base64APIToken: string, address: string, wo
 export async function verifyAPITokenAgainstTarget(base64APIToken: string, targetToken: string) {
 	try {
 		const decodedToken = Buffer.from(base64APIToken.trim(), 'base64').toString('utf-8').trim()
-		logger.debug(`Verifying token: ${decodedToken} against target: ${targetToken}`)
 		return decodedToken == targetToken || decodedToken == `@token:${targetToken}`
 	} catch (e) {
 		return null
