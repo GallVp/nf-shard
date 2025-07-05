@@ -11,12 +11,13 @@
 		"lint": "next lint",
 		"studio": "npx prisma studio",
 		"codegen": "graphql-codegen --config codegen.ts",
-		"test:cypress": "bash test/scripts/cypress.e2e.sh",
+		"test:env": "bash test/scripts/setup_test_env.sh",
+		"test:db": "dotenv -e .env.test npx prisma migrate deploy",
+		"test:build": "NODE_ENV=test next build",
+		"test:start": "dotenv -e .env.test next start",
+		"test:cypress:run": "dotenv -e .env.test yarn cypress run",
 		"test:cypress:open": "dotenv -e .env.test yarn cypress open",
-		"test:cypress:env": "bash test/scripts/setup_test_env.sh",
-		"test:cypress:db": "dotenv -e .env.test npx prisma migrate deploy",
-		"test:cypress:dev": "dotenv -e .env.test yarn next dev --turbo",
-		"test:cypress:run": "dotenv -e .env.test yarn cypress run"
+		"test:cypress:all": "bash test/scripts/cypress_e2e.sh"
 	},
 	"dependencies": {
 		"@ant-design/cssinjs": "^1.17.2",

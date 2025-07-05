@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function SignInPage() {
-	const router = useRouter()
 	const [username, setUsername] = useState('')
 	const [password, setPassword] = useState('')
 
@@ -17,7 +15,8 @@ export default function SignInPage() {
 		})
 
 		if (res.ok) {
-			router.push('/runs')
+			// https://github.com/vercel/next.js/discussions/51782
+			window.location.href = "/runs"
 		} else {
 			alert('Invalid credentials')
 		}

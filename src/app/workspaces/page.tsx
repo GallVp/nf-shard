@@ -24,3 +24,6 @@ const getData = async (): Promise<TWorkspaceProps> => {
 		workspaces: workspaces
 	}
 }
+
+export const fetchCache = "force-no-store"
+export const revalidate = 0

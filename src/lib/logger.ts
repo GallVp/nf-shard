@@ -22,15 +22,15 @@ function shouldLog(level: LogLevel) {
 
 export const logger = {
 	debug: (...args: any[]) => {
-		if (shouldLog(LogLevel.DEBUG)) console.debug('[DEBUG]', ...args)
+		if (shouldLog(LogLevel.DEBUG)) console.debug(`[DEBUG][${new Date().toISOString()}]`, ...args)
 	},
 	info: (...args: any[]) => {
-		if (shouldLog(LogLevel.INFO)) console.info('[INFO]', ...args)
+		if (shouldLog(LogLevel.INFO)) console.info(`[INFO][${new Date().toISOString()}]`, ...args)
 	},
 	warn: (...args: any[]) => {
-		if (shouldLog(LogLevel.WARN)) console.warn('[WARN]', ...args)
+		if (shouldLog(LogLevel.WARN)) console.warn(`[WARN][${new Date().toISOString()}]`, ...args)
 	},
 	error: (...args: any[]) => {
-		if (shouldLog(LogLevel.ERROR)) console.error('[ERROR]', ...args)
+		if (shouldLog(LogLevel.ERROR)) console.error(`[ERROR][${new Date().toISOString()}]`, ...args)
 	},
 }

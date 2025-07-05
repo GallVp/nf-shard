@@ -11,10 +11,9 @@ jobs:
       - uses: actions/setup-node@v4.4.0
       
       - run: yarn
-      - run: yarn generate && yarn build
     
-      - name: Start PostgreSQL with Docker Compose
+      - name: Start PostgreSQL DB
         run: docker compose --profile db up --detach
       
       - name: Run the tests
-        run: yarn test:cypress
+        run: yarn test:cypress:all
