@@ -22,7 +22,8 @@ describe('API ⁠— bearer token call', () => {
 	})
 
 	it('returns HTTP 200 OK', () => {
-		const tokenBase64 = Cypress.env('DEFAULT_ACCESS_TOKEN_BASE64')
+		const token = Cypress.env('DEFAULT_ACCESS_TOKEN')
+		const tokenBase64 =  Buffer.from(token as string).toString('base64')
 
 		cy.request({
 			method: 'GET',
