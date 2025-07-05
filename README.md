@@ -80,7 +80,7 @@ If you already have running PostgreSQL database, you can run build the project u
 yarn
 yarn migrate
 yarn build
-yarn run
+yarn start
 ```
 
 Not that `yarn migrate` requires connection to the database, so you should update `.env` file.

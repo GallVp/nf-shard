@@ -15,6 +15,7 @@ export async function verifyAPIToken(base64APIToken: string, address: string, wo
 	}
 	
 	if (!workspaceId) {
+		logger.debug('No workspaceId provided, using default access token for verification')
 		return verifyAPITokenAgainstTarget(base64APIToken, defaultTokenSecret)
 	}
 
@@ -50,6 +51,9 @@ export async function createJWTFromCredentials(payload: JWTPayload): Promise<str
 }
 
 export async function verifyJWT(token: string): Promise<any> {
+
+	// Empty tokens are not supported by jwtVerify
+	// Error: DataError: Zero-length key is not supported
 	try {
 		const { payload } = await jwtVerify(token, appSecretKey, {
 			algorithms: [appSecretAlgorithm],

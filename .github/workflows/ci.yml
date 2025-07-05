@@ -1,14 +1,21 @@
-name: Build
+name: Test
 on:
   pull_request:
-  push:
-    branches:
-      - main
+
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: actions/setup-node@v4.0.0
+      
+      - uses: actions/setup-node@v4.4.0
+        with:
+          cache: 'yarn'
+      
       - run: yarn
-      - run: yarn generate && yarn build
+    
+      - name: Start PostgreSQL DB
+        run: docker compose --profile db up --detach
+      
+      - name: Run the tests
+        run: yarn test:cypress:all
