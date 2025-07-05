@@ -27,8 +27,13 @@ export const Main = (props: TWorkspaceProps) => {
 			return
 		}
 
+		const shaOfWorkspaceToken = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(newWorkspaceToken))
+		const shaHexOfWorkspaceToken = Array.from(new Uint8Array(shaOfWorkspaceToken))
+			.map(b => b.toString(16).padStart(2, "0"))
+			.join("")
+
 		const response = await fetch(`/api/workspaces/create`, {
-			body: JSON.stringify({ name: newWorkspaceName, accessToken: newWorkspaceToken }),
+			body: JSON.stringify({ name: newWorkspaceName, accessToken: shaHexOfWorkspaceToken }),
 			method: "POST",
 			cache: "no-store",
 		})

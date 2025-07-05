@@ -28,7 +28,7 @@ describe('Signin flow', () => {
 
 		const username = Cypress.env('APP_USERNAME')
 		const password = Cypress.env('APP_PASSWORD')
-		const accessToken = Cypress.env('DEFAULT_ACCESS_TOKEN')
+		const accessToken = "xxxxxxxxxxxxxxxx"
 
 		cy.get('[data-cy=username]').type(username)
 		cy.get('[data-cy=password]').type(password)

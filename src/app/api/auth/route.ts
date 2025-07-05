@@ -17,8 +17,8 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: 'workspaceId not found' }, { status: 401 })
 	}
 
-	const targetToken = workspace.accessToken
-	if (await verifyAPITokenAgainstTarget(base64APIToken, targetToken)) {
+	const shaOfTargetToken = workspace.accessToken
+	if (await verifyAPITokenAgainstTarget(base64APIToken, shaOfTargetToken)) {
 		return NextResponse.json({ ok: true })
 	}
 

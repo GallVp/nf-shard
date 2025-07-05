@@ -3,7 +3,7 @@
 describe('API ⁠— bearer token call', () => {
 
 	it('returns HTTP 401 Invalid or expired API token', () => {
-		const token = 'Dummy'
+		const token = 'DummyToken'
 
 		const resp = cy.request({
 			method: 'GET',

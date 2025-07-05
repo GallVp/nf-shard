@@ -17,8 +17,10 @@ const getData = async () => {
 		console.error(e)
 	}
 
+	const obfuscatedToken = defaultTokenSecret ? "xxxxxxxxxxxxxxxx" : 'Token is not set. The default workspace is locked!'
+
 	return {
-		workspaces: [{ id: 0, name: "Default", accessToken: defaultTokenSecret || 'Token is not set. The default workspace is locked!' }, ...workspaces],
+		workspaces: [{ id: 0, name: "Default", accessToken: obfuscatedToken }, ...workspaces],
 	}
 }
 
