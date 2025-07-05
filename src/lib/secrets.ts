@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify, JWTPayload } from "jose"
 import { logger } from "./logger"
+import sha256 from 'crypto-js/sha256'
 
 export const defaultTokenSecret = process.env.DEFAULT_ACCESS_TOKEN
 const appSecretKey = new TextEncoder().encode(process.env.APP_SECRET_KEY)
@@ -13,10 +14,11 @@ export async function verifyAPIToken(base64APIToken: string, address: string, wo
 		logger.warn('The default access token is not defined in the environment. Rejecting token verification!')
 		return null
 	}
-	
+
 	if (!workspaceId) {
 		logger.debug('No workspaceId provided, using default access token for verification')
-		return verifyAPITokenAgainstTarget(base64APIToken, defaultTokenSecret)
+		const shaOfToken = sha256(defaultTokenSecret).toString()
+		return verifyAPITokenAgainstTarget(base64APIToken, shaOfToken)
 	}
 
 	const res = await fetch(`${address}/api/auth`, {
@@ -32,10 +34,11 @@ export async function verifyAPIToken(base64APIToken: string, address: string, wo
 	return null
 }
 
-export async function verifyAPITokenAgainstTarget(base64APIToken: string, targetToken: string) {
+export async function verifyAPITokenAgainstTarget(base64APIToken: string, shaOfTargetToken: string) {
 	try {
-		const decodedToken = Buffer.from(base64APIToken.trim(), 'base64').toString('utf-8').trim()
-		return decodedToken == targetToken || decodedToken == `@token:${targetToken}`
+		const decodedToken = Buffer.from(base64APIToken.trim(), 'base64').toString('utf-8').trim().replace("@token:", "")
+		const shaOfDecodedToken = sha256(decodedToken).toString()
+		return shaOfDecodedToken === shaOfTargetToken
 	} catch (e) {
 		return null
 	}
