@@ -5,6 +5,7 @@ APP_SECRET_KEY=$(openssl rand -hex 32)
 DEFAULT_ACCESS_TOKEN=$(openssl rand -hex 32 | sed -E 's/(.{16})(.{16})(.{16})(.{16})/\1-\2-\3-\4/')
 
 cat << EOF > .env.test
+POSTGRES_PASSWORD=postgres
 POSTGRES_URI=postgresql://postgres:postgres@localhost:5435/postgres_test?schema=public
 LOG_LEVEL=DEBUG
 APP_SECRET_KEY=$APP_SECRET_KEY
