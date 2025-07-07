@@ -27,7 +27,7 @@ export const SearchBar = ({ tags, addTag, removeTag }: SearchProps) => {
 					<li className="flex-grow">
 						<input
 							className="flex-grow w-full focus:outline-none border-none focus:ring-0 text-sm text-gray-900"
-							placeholder="Search runs, workflow id, tags etc"
+							placeholder="Search run:, workspace:, tag:, user:, project:, after:, before:"
 							type="text"
 							onChange={(e) => setSearch(e.target.value)}
 							value={search}

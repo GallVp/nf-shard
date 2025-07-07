@@ -9,10 +9,10 @@ import { clsx } from "clsx"
 import { CodeText } from ".."
 import { AiOutlineLoading3Quarters } from "react-icons/ai"
 import { ComputeEnvironment, ProcessKeys } from "@prisma/client"
-import { Button } from "@/components/ui/button"
+// import { Button } from "@/components/ui/button"
 import { useState } from "react"
-import { TerminateJobDocument } from "@/generated/graphql/graphql"
-import { useMutationWithContext } from "@/common/urql"
+// import { TerminateJobDocument } from "@/generated/graphql/graphql"
+// import { useMutationWithContext } from "@/common/urql"
 
 type WorkflowDetailsProps = {
 	runName: string
@@ -28,41 +28,41 @@ type WorkflowDetailsProps = {
 
 export const WorkflowDetails = (props: WorkflowDetailsProps) => {
 	const [terminateWorkflow, setTerminateWorkflow] = useState<boolean>(false)
-	const [_, terminateJobMutation] = useMutationWithContext(TerminateJobDocument)
+	// const [_, terminateJobMutation] = useMutationWithContext(TerminateJobDocument)
 
-	const stopProcess = async () => {
-		if (!props.processKey) {
-			return
-		}
+	// const stopProcess = async () => {
+	// 	if (!props.processKey) {
+	// 		return
+	// 	}
 
-		const computeEnv: ComputeEnvironment = (props.processKey as any).computeEnvironment
-		const body = {
-			process_id: props.processKey.processKey,
-			executor: props.processKey.executor,
-		}
+	// 	const computeEnv: ComputeEnvironment = (props.processKey as any).computeEnvironment
+	// 	const body = {
+	// 		process_id: props.processKey.processKey,
+	// 		executor: props.processKey.executor,
+	// 	}
 
-		try {
-			terminateJobMutation(
-				{
-					command: {
-						processKey: props.processKey.processKey,
-						executor: props.processKey.executor,
-					},
-				},
-				{
-					url: `${computeEnv.orchestrator_endpoint}/query`,
-					token: `${computeEnv.orchestrator_token}`,
-				}
-			)
+	// 	try {
+	// 		terminateJobMutation(
+	// 			{
+	// 				command: {
+	// 					processKey: props.processKey.processKey,
+	// 					executor: props.processKey.executor,
+	// 				},
+	// 			},
+	// 			{
+	// 				url: `${computeEnv.orchestrator_endpoint}/query`,
+	// 				token: `${computeEnv.orchestrator_token}`,
+	// 			}
+	// 		)
 
-			console.log("stopping process key", props.processKey)
-		} catch (error) {
-			console.log(props.processKey)
-			console.error(error)
-		}
+	// 		console.log("stopping process key", props.processKey)
+	// 	} catch (error) {
+	// 		console.log(props.processKey)
+	// 		console.error(error)
+	// 	}
 
-		setTerminateWorkflow(false)
-	}
+	// 	setTerminateWorkflow(false)
+	// }
 
 	return (
 		<div className={clsx("bg-white py-8 px-8 rounded-md shadow-sm ring-1 ring-gray-900/5", props.className)}>
@@ -88,11 +88,11 @@ export const WorkflowDetails = (props: WorkflowDetailsProps) => {
 							{props.workflowName} {props.projectName}
 						</div>
 					</div>
-					{props.status == WorkflowStatus.RUNNING && props.processKey?.executor !== "float" && (
+					{/* {props.status == WorkflowStatus.RUNNING && props.processKey?.executor !== "float" && (
 						<Button variant="destructive" onClick={() => setTerminateWorkflow(true)}>
 							Stop
 						</Button>
-					)}
+					)} */}
 				</div>
 			</div>
 
@@ -109,7 +109,7 @@ export const WorkflowDetails = (props: WorkflowDetailsProps) => {
 				</div>
 			)}
 
-			<Modal open={terminateWorkflow} setOpen={setTerminateWorkflow}>
+			{/* <Modal open={terminateWorkflow} setOpen={setTerminateWorkflow}>
 				<div>
 					<div className="text-center">
 						<div className="mt-2 text-left">
@@ -127,7 +127,7 @@ export const WorkflowDetails = (props: WorkflowDetailsProps) => {
 						Terminate
 					</button>
 				</div>
-			</Modal>
+			</Modal> */}
 		</div>
 	)
 }

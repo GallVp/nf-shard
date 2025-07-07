@@ -4,7 +4,7 @@ import { Inter } from "next/font/google"
 import { MainNavigation } from "./components"
 import StyledComponentsRegistry from "../lib/AntdRegistry"
 import { cn } from "@/lib/utils"
-import { UrqlWrapper } from "@/lib/clients/urqlClient"
+// import { UrqlWrapper } from "@/lib/clients/urqlClient"
 
 const inter = Inter({
 	subsets: ["latin"],
@@ -16,15 +16,27 @@ export const metadata: Metadata = {
 	description: "Monitor Nextflow pipelines",
 }
 
+// export default function RootLayout({ children }: { children: React.ReactNode }) {
+// 	return (
+// 		<html lang="en" className="h-full">
+// 			<body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
+// 				<UrqlWrapper>
+// 					<StyledComponentsRegistry>
+// 						<MainNavigation child={children} />
+// 					</StyledComponentsRegistry>
+// 				</UrqlWrapper>
+// 			</body>
+// 		</html>
+// 	)
+// }
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" className="h-full">
 			<body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
-				<UrqlWrapper>
-					<StyledComponentsRegistry>
-						<MainNavigation child={children} />
-					</StyledComponentsRegistry>
-				</UrqlWrapper>
+				<StyledComponentsRegistry>
+					<MainNavigation child={children} />
+				</StyledComponentsRegistry>
 			</body>
 		</html>
 	)
