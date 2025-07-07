@@ -8,9 +8,12 @@ export default function SignInPage() {
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault()
+
+		const passwordSHA256 = await string2SHA256(password)
+
 		const res = await fetch('/api/signin', {
 			method: 'POST',
-			body: JSON.stringify({ username, password }),
+			body: JSON.stringify({ username, passwordSHA256 }),
 			headers: { 'Content-Type': 'application/json' },
 		})
 
@@ -20,6 +23,15 @@ export default function SignInPage() {
 		} else {
 			alert('Invalid credentials')
 		}
+	}
+
+	const string2SHA256 = async (str: string): Promise<string> => {
+		const encoder = new TextEncoder()
+		const data = encoder.encode(str)
+		const hashBuffer = await window.crypto.subtle.digest("SHA-256", data)
+		const hashArray = Array.from(new Uint8Array(hashBuffer))
+		const hex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("")
+		return hex
 	}
 
 	return (

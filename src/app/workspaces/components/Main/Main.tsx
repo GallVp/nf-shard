@@ -27,13 +27,10 @@ export const Main = (props: TWorkspaceProps) => {
 			return
 		}
 
-		const shaOfWorkspaceToken = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(newWorkspaceToken))
-		const shaHexOfWorkspaceToken = Array.from(new Uint8Array(shaOfWorkspaceToken))
-			.map(b => b.toString(16).padStart(2, "0"))
-			.join("")
+		const shaOfWorkspaceToken = await string2SHA256(newWorkspaceToken)
 
 		const response = await fetch(`/api/workspaces/create`, {
-			body: JSON.stringify({ name: newWorkspaceName, accessToken: shaHexOfWorkspaceToken }),
+			body: JSON.stringify({ name: newWorkspaceName, accessToken: shaOfWorkspaceToken }),
 			method: "POST",
 			cache: "no-store",
 		})
@@ -52,6 +49,15 @@ export const Main = (props: TWorkspaceProps) => {
 			setWorkspaces(workspaces)
 		}
 		setOpenCreateModal(false)
+	}
+
+	const string2SHA256 = async (str: string): Promise<string> => {
+		const encoder = new TextEncoder()
+		const data = encoder.encode(str)
+		const hashBuffer = await window.crypto.subtle.digest("SHA-256", data)
+		const hashArray = Array.from(new Uint8Array(hashBuffer))
+		const hex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("")
+		return hex
 	}
 
 	const deleteWorkspace = async () => {
