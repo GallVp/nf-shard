@@ -15,7 +15,9 @@ jobs:
       - run: yarn
     
       - name: Start PostgreSQL DB
-        run: docker compose --profile db up --detach
+        run: |
+          yarn test:env
+          docker compose --env-file .env.test --profile db up --detach
       
       - name: Run the tests
         run: yarn test:cypress:all
