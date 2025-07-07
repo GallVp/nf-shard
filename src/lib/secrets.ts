@@ -68,13 +68,15 @@ export async function verifyJWT(token: string): Promise<any> {
 
 }
 
-export function verifyCredentials(username: string, password: string): boolean {
+export function verifyCredentials(username: string, shaOfPassword: string): boolean {
 
 	if (!userPassword) {
 		logger.warn('User password is not defined in the environment. Rejecting credential verification!')
 		return false
 	}
 
-	return username === userName && password === userPassword
+	const shaOfUserPassword = sha256(userPassword).toString()
+
+	return username === userName && shaOfPassword === shaOfUserPassword
 }
 
