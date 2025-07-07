@@ -16,7 +16,7 @@ jobs:
     
       - name: Start PostgreSQL DB
         run: |
-          export POSTGRES_PASSWORD=postgres
+          yarn test:env
           docker compose --profile db up --detach
       
       - name: Run the tests
