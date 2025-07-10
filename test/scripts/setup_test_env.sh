@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+POSTGRES_PASSWORD=postgres
+CYPRESS_BASE_URL=http://localhost:3000
+APP_SECRET_KEY=$(openssl rand -hex 32)
+DEFAULT_ACCESS_TOKEN=$(openssl rand -hex 32 | sed -E 's/(.{16})(.{16})(.{16})(.{16})/\1-\2-\3-\4/')
+
+cat << EOF > .env.test
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+POSTGRES_URI=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5435/postgres_test?schema=public
+LOG_LEVEL=DEBUG
+APP_SECRET_KEY=$APP_SECRET_KEY
+DEFAULT_ACCESS_TOKEN=$DEFAULT_ACCESS_TOKEN
+APP_USERNAME=nf-shard
+APP_PASSWORD=nf-shard-test
+CYPRESS_DEFAULT_ACCESS_TOKEN=$DEFAULT_ACCESS_TOKEN
+CYPRESS_BASE_URL=$CYPRESS_BASE_URL
+CYPRESS_APP_USERNAME=nf-shard
+CYPRESS_APP_PASSWORD=nf-shard-test
+EOF

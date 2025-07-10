@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # Export the project name for docker compose
 export COMPOSE_PROJECT_NAME="nf-shard"
 
@@ -15,18 +17,30 @@ if ! docker compose version  &> /dev/null; then
 	exit 1
 fi
 
-POSTGRES_PASSWORD=postgres
-POSTGRES_URI=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres?schema=public
+# Input environment
+POSTGRES_PASSWORD=
+APP_USERNAME=
+APP_PASSWORD=
+LOG_LEVEL=INFO
+
 FORCE=0
 
-# Optionally, get the Postgresql password as a command line argument -p
-while getopts "fp:" opt; do
+while getopts "fp:u:s:l:" opt; do
     case ${opt} in
 		f )
         FORCE=1
         ;;
     p )
         POSTGRES_PASSWORD="$OPTARG"
+        ;;
+		u )
+        APP_USERNAME="$OPTARG"
+        ;;
+		s )
+        APP_PASSWORD="$OPTARG"
+        ;;
+		l )
+        LOG_LEVEL="$OPTARG"
         ;;
     \? )
         echo "Invalid option" 1>&2
@@ -62,30 +76,33 @@ elif [ $FORCE -eq 1 ]; then
 	fi
 fi
 
-# Create entry point
-mkdir -p ./docker
-cat <<EOF > ./docker/entrypoint.sh
-#!/bin/sh
+# Check if required environment variables are set
+if [ -z "$POSTGRES_PASSWORD" ]; then
+	echo "POSTGRES_PASSWORD is required. Use -p to set it."
+	exit 1
+fi
+if [ -z "$APP_USERNAME" ]; then
+	echo "APP_USERNAME is required. Use -u to set it."
+	exit 1
+fi
+if [ -z "$APP_PASSWORD" ]; then
+	echo "APP_PASSWORD is required. Use -s to set it."
+	exit 1
+fi
 
-# deploy migrations
-npx prisma migrate deploy
-
-# run server
-node server.js
-EOF
-
-chmod +x ./docker/entrypoint.sh
+# Setup environment
+POSTGRES_URI=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres?schema=public
+APP_SECRET_KEY=$(openssl rand -hex 32)
+DEFAULT_ACCESS_TOKEN=$(openssl rand -hex 32 | sed -E 's/(.{16})(.{16})(.{16})(.{16})/\1-\2-\3-\4/')
 
 # Run docker compose
 docker compose -f - --profile all up --wait <<EOF
-version: "3.7"
-
 services:
   postgres:
     image: postgres
     container_name: nf-shard-postgres
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
     ports:
       - 5435:5432
     volumes:
@@ -93,29 +110,42 @@ services:
     profiles:
       - db
       - all
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
 
   nextjs:
-    image: ghcr.io/gallvp/nf-shard:latest
     container_name: nf-shard-nextjs
-    entrypoint: ["/app/entrypoint.sh"]
-    volumes:
-      - ./docker/entrypoint.sh:/app/entrypoint.sh
+    image: ghcr.io/gallvp/nf-shard:latest
     platform: linux/amd64
     environment:
-      POSTGRES_URI: ${POSTGRES_URI}
+      POSTGRES_URI: ${POSTGRES_URI:?}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?}
+      DEFAULT_ACCESS_TOKEN: ${DEFAULT_ACCESS_TOKEN}
+      APP_USERNAME: ${APP_USERNAME:?}
+      APP_PASSWORD: ${APP_PASSWORD:?}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       - 3000:3000
     profiles:
       - server
       - all
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    restart: always
 
 volumes:
   postgres-data:
 EOF
 
-
 sleep 20
 
-echo -e "\nnf-shard deployed locally at http://localhost:3000"
+echo -e "\nnf-shard deployed locally at http://localhost:3000\n"
+
+echo -e "Default workspace config:"
+echo -e "tower {\n  enabled = true\n  accessToken = \"${DEFAULT_ACCESS_TOKEN}\"\n  endpoint = \"http://localhost:3000/api\"\n}\n"
+echo -e "Keep the secret accessToken safe, it is used to authenticate with the nf-shard server."

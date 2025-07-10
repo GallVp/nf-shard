@@ -14,7 +14,7 @@ type TMainProps = {
 }
 
 export const Main = (props: TMainProps) => {
-	const workspaces = [{ id: 0, name: "Default" }, ...props.workspaces]
+	const workspaces = props.workspaces
 	const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace>(workspaces[0])
 	const [shardConfig, setShardConfig] = useState<string>("")
 
@@ -23,10 +23,10 @@ export const Main = (props: TMainProps) => {
 
 		let config = []
 		config.push("enabled = true")
-		config.push(`accessToken = "x"`)
+		config.push(`accessToken = "${selectedWorkspace.accessToken}"`)
 		config.push(`endpoint = "${baseUrl}/api"`)
 		if (selectedWorkspace.id !== 0) {
-			config.push(`workspaceId = "${selectedWorkspace.id}"`)
+			config.push(`workspaceId = ${selectedWorkspace.id}`)
 		}
 
 		let configString = "tower {\n"

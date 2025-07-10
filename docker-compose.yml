@@ -1,11 +1,9 @@
-version: "3.7"
-
 services:
   postgres:
     image: postgres
     container_name: nf-shard-postgres
     environment:
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
     ports:
       - 5435:5432
     volumes:
@@ -13,23 +11,33 @@ services:
     profiles:
       - db
       - all
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
 
   nextjs:
-    image: ghcr.io/gallvp/nf-shard:latest
     container_name: nf-shard-nextjs
-    entrypoint: ["/app/entrypoint.sh"]
-    volumes:
-      - ./docker/entrypoint.sh:/app/entrypoint.sh
+    build: .
     platform: linux/amd64
     environment:
-      POSTGRES_URI: ${POSTGRES_URI}
+      POSTGRES_URI: ${POSTGRES_URI:?}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?}
+      DEFAULT_ACCESS_TOKEN: ${DEFAULT_ACCESS_TOKEN}
+      APP_USERNAME: ${APP_USERNAME:?}
+      APP_PASSWORD: ${APP_PASSWORD:?}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       - 3000:3000
     profiles:
       - server
       - all
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    restart: always
 
 volumes:
   postgres-data:
