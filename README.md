@@ -80,6 +80,28 @@ Start the containers,
 docker compose --profile all up --detach
 ```
 
+### Method 3 - AWS
+
+Register a domain name under [Amazon Route 53](https://aws.amazon.com/route53/). For the domain name, get a SSL/TLS certificate from [Amazon Certificate Manager](https://aws.amazon.com/certificate-manager/)
+
+Download the repository and run the deployment script,
+
+```bash
+git clone git@github.com:GallVp/nf-shard.git && cd nf-shard
+
+bash deploy-aws.sh \
+    -p <Postgresql password> \
+    -u <nf-shard username> \
+    -s <nf-shard password> \
+    -v <VPC Id> \
+    -n <Public subnet id in zone 1> \
+    -b <Public subnet id in zone 2> \
+    -k <Key pair name> \
+    -c <ACM certificate ARN> \
+    -d <Domain name> \
+    -z <Hosted zone Id from Route 53>
+```
+
 ## Development
 
 Setup the secrets and start the PostgreSQL server,
