@@ -13,14 +13,17 @@ POSTGRES_PASSWORD=
 APP_USERNAME=
 APP_PASSWORD=
 VPC_ID=
-SUBNET_ID=
+SUBNET_AZ1_ID=
+SUBNET_AZ2_ID=
 KEY_PAIR_NAME=
 ACM_CERTIFICATE_ARN=
+DOMAIN_NAME=
+HOSTED_ZONE_ID=
 ACCESS_CIDR="0.0.0.0/0"
 VERSION="main"
 LOG_LEVEL=INFO
 
-while getopts "p:u:s:v:n:k:c:a:e:l:" opt; do
+while getopts "p:u:s:v:n:b:k:c:d:z:a:e:l:" opt; do
     case ${opt} in
     p )
         POSTGRES_PASSWORD="$OPTARG"
@@ -35,13 +38,22 @@ while getopts "p:u:s:v:n:k:c:a:e:l:" opt; do
         VPC_ID="$OPTARG"
         ;;
 		n )
-        SUBNET_ID="$OPTARG"
+        SUBNET_AZ1_ID="$OPTARG"
+        ;;
+		b )
+        SUBNET_AZ2_ID="$OPTARG"
         ;;
 		k )
         KEY_PAIR_NAME="$OPTARG"
         ;;
 		c )
         ACM_CERTIFICATE_ARN="$OPTARG"
+        ;;
+		d )
+        DOMAIN_NAME="$OPTARG"
+        ;;
+		z )
+        HOSTED_ZONE_ID="$OPTARG"
         ;;
 		a )
         ACCESS_CIDR="$OPTARG"
@@ -77,8 +89,12 @@ if [ -z "$VPC_ID" ]; then
 	echo "VPC_ID is required. Use -v to set it."
 	exit 1
 fi
-if [ -z "$SUBNET_ID" ]; then
-	echo "SUBNET_ID is required. Use -n to set it."
+if [ -z "$SUBNET_AZ1_ID" ]; then
+	echo "SUBNET_AZ1_ID is required. Use -n to set it."
+	exit 1
+fi
+if [ -z "$SUBNET_AZ2_ID" ]; then
+	echo "SUBNET_AZ2_ID is required. Use -b to set it."
 	exit 1
 fi
 if [ -z "$KEY_PAIR_NAME" ]; then
@@ -87,6 +103,14 @@ if [ -z "$KEY_PAIR_NAME" ]; then
 fi
 if [ -z "$ACM_CERTIFICATE_ARN" ]; then
 	echo "ACM_CERTIFICATE_ARN is required. Use -c to set it."
+	exit 1
+fi
+if [ -z "$DOMAIN_NAME" ]; then
+	echo "DOMAIN_NAME is required. Use -d to set it."
+	exit 1
+fi
+if [ -z "$HOSTED_ZONE_ID" ]; then
+	echo "HOSTED_ZONE_ID is required. Use -z to set it."
 	exit 1
 fi
 
@@ -106,21 +130,18 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
     VpcId=$VPC_ID \
-    SubnetId=$SUBNET_ID \
+    SubnetId=$SUBNET_AZ1_ID \
+		SecondarySubnetId=$SUBNET_AZ2_ID \
 		NfShardPortCIDR=$ACCESS_CIDR \
     KeyName=$KEY_PAIR_NAME \
 		ACMCertificateArn=$ACM_CERTIFICATE_ARN \
+		DomainName=$DOMAIN_NAME \
+		HostedZoneId=$HOSTED_ZONE_ID \
 		Version=$VERSION \
 		LogLevel=$LOG_LEVEL
 
-# Get the URL
-APP_URL=$(aws cloudformation describe-stacks \
-  --stack-name nf-shard \
-  --query "Stacks[0].Outputs[?OutputKey=='AppURL'].OutputValue" \
-  --output text)
-
-echo -e "\nnf-shard deployed at $APP_URL\n"
+echo -e "\nnf-shard deployed at https://$DOMAIN_NAME\n"
 
 echo -e "Default workspace config:"
-echo -e "tower {\n  enabled = true\n  accessToken = \"${DEFAULT_ACCESS_TOKEN}\"\n  endpoint = \"$APP_URL/api\"\n}\n"
+echo -e "tower {\n  enabled = true\n  accessToken = \"${DEFAULT_ACCESS_TOKEN}\"\n  endpoint = \"https://$DOMAIN_NAME/api\"\n}\n"
 echo -e "Keep the secret accessToken safe, it is used to authenticate with the nf-shard server."

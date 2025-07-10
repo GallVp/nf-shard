@@ -14,9 +14,19 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
     Description: Subnet for the EC2 instance
 
+  SecondarySubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: A secondary subnet in a different AZ than the AZ for SubnetId
+
   ACMCertificateArn:
     Type: String
     Description: ARN of a validated ACM certificate
+
+  DomainName:
+    Type: String
+  
+  HostedZoneId:
+    Type: String
 
   NfShardPortCIDR:
     Type: String
@@ -25,24 +35,23 @@ Parameters:
 
   Version:
     Type: String
-    Default: "main"
+    Default: main
     Description: Branch or tag of the nf-shard repository to deploy
 
   LogLevel:
     Type: String
-    Default: "INFO"
+    Default: INFO
     Description: Log level for nf-shard
-  
+
   LatestAmiId:
-    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64'
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64
 
 Resources:
-
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow SSH and Next.js traffic
+      GroupDescription: Allow SSH and HTTPS traffic
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -54,12 +63,21 @@ Resources:
           ToPort: 443
           CidrIp: !Ref NfShardPortCIDR
 
+  AppSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AppSecurityGroup
+      IpProtocol: tcp
+      FromPort: 3000
+      ToPort: 3000
+      SourceSecurityGroupId: !Ref AppSecurityGroup
+
   AppInstanceRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: nf-shard-instance-role
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -69,13 +87,13 @@ Resources:
       Policies:
         - PolicyName: nf-shard-ec2-basic-access
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
                   - secretsmanager:GetSecretValue
-                Resource: "*"
+                Resource: '*'
 
   AppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -91,7 +109,8 @@ Resources:
       InstanceType: t3.large
       KeyName: !Ref KeyName
       SubnetId: !Ref SubnetId
-      SecurityGroupIds: [!Ref AppSecurityGroup]
+      SecurityGroupIds:
+        - !Ref AppSecurityGroup
       ImageId: !Ref LatestAmiId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
@@ -99,8 +118,8 @@ Resources:
             VolumeSize: 30
             VolumeType: gp3
             DeleteOnTermination: true
-      UserData:
-        Fn::Base64: !Sub |
+      UserData: !Base64
+        Fn::Sub: |
           #!/bin/bash
           dnf update -y
           dnf install -y docker git
@@ -113,17 +132,15 @@ Resources:
           ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 
           cd /home/ec2-user
-          git clone https://github.com/GallVp/nf-shard.git app
+          git clone -b ${Version} --single-branch https://github.com/GallVp/nf-shard.git app
           chown -R ec2-user:ec2-user /home/ec2-user/app
-          git config --global --add safe.directory /home/ec2-user/app
           cd app
-          git checkout ${Version}
 
           POSTGRES_PASSWORD=$(aws ssm get-parameter --name "nf-shard-postgres-pass" --with-decryption --query Parameter.Value --output text)
           APP_USERNAME=$(aws ssm get-parameter --name "nf-shard-user" --with-decryption --query Parameter.Value --output text)
           APP_PASSWORD=$(aws ssm get-parameter --name "nf-shard-pass" --with-decryption --query Parameter.Value --output text)
           DEFAULT_ACCESS_TOKEN=$(aws ssm get-parameter --name "nf-shard-access-token" --with-decryption --query Parameter.Value --output text)
-          
+
           cat << EOF > .env
           POSTGRES_PASSWORD=${!POSTGRES_PASSWORD}
           POSTGRES_URI=postgresql://postgres:${!POSTGRES_PASSWORD}@postgres:5432/postgres?schema=public
@@ -134,7 +151,7 @@ Resources:
           APP_PASSWORD=${!APP_PASSWORD}
           EOF
 
-          docker-compose --profile all --profile proxy up -d
+          docker-compose --profile all up -d
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -144,15 +161,21 @@ Resources:
       Protocol: HTTP
       VpcId: !Ref VpcId
       TargetType: instance
-      HealthCheckPath: /
+      HealthCheckPath: /signin
+      Targets:
+        - Id: !Ref AppInstance
+          Port: 3000
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Name: alb-nf-shard
       Scheme: internet-facing
-      Subnets: [!Ref SubnetId]
-      SecurityGroups: [!Ref AppSecurityGroup]
+      Subnets:
+        - !Ref SubnetId
+        - !Ref SecondarySubnetId
+      SecurityGroups:
+        - !Ref AppSecurityGroup
 
   ListenerHTTPS:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -166,18 +189,12 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
 
-  TargetGroupAttachment:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroupAttachment
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
     Properties:
-      TargetGroupArn: !Ref TargetGroup
-      TargetId: !Ref AppInstance
-      Port: 3000
-
-Outputs:
-  LoadBalancerDNS:
-    Description: DNS name of the ALB
-    Value: !GetAtt LoadBalancer.DNSName
-
-  AppURL:
-    Description: URL to access nf-shard
-    Value: !Sub "https://${LoadBalancer.DNSName}"
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt LoadBalancer.DNSName
