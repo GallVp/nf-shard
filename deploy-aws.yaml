@@ -1,0 +1,183 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: nf-shard AWS Deployment Template
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair for SSH access
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where the instance will run
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet for the EC2 instance
+
+  ACMCertificateArn:
+    Type: String
+    Description: ARN of a validated ACM certificate
+
+  NfShardPortCIDR:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: CIDR allowed to access HTTPS port 443 and SSH port 22
+
+  Version:
+    Type: String
+    Default: "main"
+    Description: Branch or tag of the nf-shard repository to deploy
+
+  LogLevel:
+    Type: String
+    Default: "INFO"
+    Description: Log level for nf-shard
+  
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64'
+
+Resources:
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and Next.js traffic
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref NfShardPortCIDR
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref NfShardPortCIDR
+
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: nf-shard-instance-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: nf-shard-ec2-basic-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: nf-shard-instance-profile
+      Roles:
+        - !Ref AppInstanceRole
+
+  AppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref AppInstanceProfile
+      InstanceType: t3.large
+      KeyName: !Ref KeyName
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds: [!Ref AppSecurityGroup]
+      ImageId: !Ref LatestAmiId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+            DeleteOnTermination: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y docker git
+          systemctl enable docker
+          systemctl start docker
+          usermod -aG docker ec2-user
+
+          curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+          cd /home/ec2-user
+          git clone https://github.com/GallVp/nf-shard.git app
+          chown -R ec2-user:ec2-user /home/ec2-user/app
+          git config --global --add safe.directory /home/ec2-user/app
+          cd app
+          git checkout ${Version}
+
+          POSTGRES_PASSWORD=$(aws ssm get-parameter --name "nf-shard-postgres-pass" --with-decryption --query Parameter.Value --output text)
+          APP_USERNAME=$(aws ssm get-parameter --name "nf-shard-user" --with-decryption --query Parameter.Value --output text)
+          APP_PASSWORD=$(aws ssm get-parameter --name "nf-shard-pass" --with-decryption --query Parameter.Value --output text)
+          DEFAULT_ACCESS_TOKEN=$(aws ssm get-parameter --name "nf-shard-access-token" --with-decryption --query Parameter.Value --output text)
+          
+          cat << EOF > .env
+          POSTGRES_PASSWORD=${!POSTGRES_PASSWORD}
+          POSTGRES_URI=postgresql://postgres:${!POSTGRES_PASSWORD}@postgres:5432/postgres?schema=public
+          LOG_LEVEL=${LogLevel}
+          APP_SECRET_KEY=$(openssl rand -hex 32)
+          DEFAULT_ACCESS_TOKEN=${!DEFAULT_ACCESS_TOKEN}
+          APP_USERNAME=${!APP_USERNAME}
+          APP_PASSWORD=${!APP_PASSWORD}
+          EOF
+
+          docker-compose --profile all --profile proxy up -d
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: tg-nf-shard
+      Port: 3000
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: instance
+      HealthCheckPath: /
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: alb-nf-shard
+      Scheme: internet-facing
+      Subnets: [!Ref SubnetId]
+      SecurityGroups: [!Ref AppSecurityGroup]
+
+  ListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACMCertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  TargetGroupAttachment:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroupAttachment
+    Properties:
+      TargetGroupArn: !Ref TargetGroup
+      TargetId: !Ref AppInstance
+      Port: 3000
+
+Outputs:
+  LoadBalancerDNS:
+    Description: DNS name of the ALB
+    Value: !GetAtt LoadBalancer.DNSName
+
+  AppURL:
+    Description: URL to access nf-shard
+    Value: !Sub "https://${LoadBalancer.DNSName}"

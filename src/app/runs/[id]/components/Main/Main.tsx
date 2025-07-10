@@ -23,7 +23,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { SlideOver } from "@/app/components"
 import { workflowStatus } from "@/common/index"
 import { LogsContainer } from "@/app/components/LogsContainer/LogsContainer"
-// import { useSubscription } from "urql"
+import { useSubscription } from "urql"
 import { Log, StreamLogsDocument } from "@/generated/graphql/graphql"
 
 type PageProps = {
@@ -41,10 +41,10 @@ export const MainRun = (props: PageProps) => {
 	const tasksRef = useRef<Task[]>()
 	const shouldPoll = useRef<boolean>(true)
 	const [selectedTask, setselectedTask] = useState<Task | undefined>()
-	// const [newLogSub] = useSubscription({
-	// 	query: StreamLogsDocument,
-	// 	variables: { runName: workflow.runName },
-	// })
+	const [newLogSub] = useSubscription({
+		query: StreamLogsDocument,
+		variables: { runName: workflow.runName },
+	})
 	const [logs, setLogs] = useState<Log[]>([])
 
 	const status = useMemo(() => {
@@ -104,14 +104,14 @@ export const MainRun = (props: PageProps) => {
 		tasksRef.current = tasks
 	}, [tasks])
 
-	// useEffect(() => {
-	// 	console.log("sub", newLogSub)
-	// 	if (newLogSub.data) {
-	// 		const log = newLogSub.data.streamLogs
-	// 		setLogs((prev) => [...prev, log])
-	// 		console.log(log.message)
-	// 	}
-	// }, [newLogSub, workflow.runName])
+	useEffect(() => {
+		console.log("sub", newLogSub)
+		if (newLogSub.data) {
+			const log = newLogSub.data.streamLogs
+			setLogs((prev) => [...prev, log])
+			console.log(log.message)
+		}
+	}, [newLogSub, workflow.runName])
 
 	const tabs = [
 		{
