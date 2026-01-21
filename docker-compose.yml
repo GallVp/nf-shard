@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres
+    image: postgres:17.5
     container_name: nf-shard-postgres
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
