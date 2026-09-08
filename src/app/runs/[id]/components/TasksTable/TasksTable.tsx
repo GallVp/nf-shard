@@ -4,6 +4,7 @@ import {
 	flexRender,
 	getCoreRowModel,
 	getFilteredRowModel,
+	getPaginationRowModel,
 	getSortedRowModel,
 	useReactTable,
 } from "@tanstack/react-table"
@@ -133,11 +134,17 @@ export const TasksTable = ({ tasks, className, onTaskClick }: TasksTableProps) =
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
+		getPaginationRowModel: getPaginationRowModel(),
 		globalFilterFn: "includesString",
 		state: {
 			globalFilter,
 		},
 		onGlobalFilterChange: setGlobalFilter,
+		initialState: {
+			pagination: {
+				pageSize: 25,
+			},
+		},
 	})
 
 	return (
@@ -222,6 +229,55 @@ export const TasksTable = ({ tasks, className, onTaskClick }: TasksTableProps) =
 						))}
 					</tfoot>
 				</table>
+			</div>
+
+			<div className="flex items-center justify-between pt-3 text-xs text-gray-500">
+				<div>
+					Showing{" "}
+					{table.getFilteredRowModel().rows.length === 0
+						? 0
+						: table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
+					{"-"}
+					{Math.min(
+						(table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+						table.getFilteredRowModel().rows.length
+					)}{" "}
+					of {table.getFilteredRowModel().rows.length} tasks
+				</div>
+
+				<div className="flex items-center gap-2">
+					<select
+						value={table.getState().pagination.pageSize}
+						onChange={(e) => table.setPageSize(Number(e.target.value))}
+						className="border-gray-300 rounded text-xs"
+					>
+						{[25, 50, 100, 250].map((pageSize) => (
+							<option key={pageSize} value={pageSize}>
+								{pageSize} / page
+							</option>
+						))}
+					</select>
+
+					<button
+						className="px-2 py-1 border border-gray-300 rounded disabled:opacity-50"
+						onClick={() => table.previousPage()}
+						disabled={!table.getCanPreviousPage()}
+					>
+						Previous
+					</button>
+
+					<span>
+						Page {table.getState().pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+					</span>
+
+					<button
+						className="px-2 py-1 border border-gray-300 rounded disabled:opacity-50"
+						onClick={() => table.nextPage()}
+						disabled={!table.getCanNextPage()}
+					>
+						Next
+					</button>
+				</div>
 			</div>
 		</Container>
 	)
