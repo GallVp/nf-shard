@@ -1,14 +1,26 @@
 import { NextResponse } from "next/server"
-import { WorkflowById, DeleteWorkflow } from "@/services/prisma"
+import { WorkflowById, DeleteWorkflow, TasksByWorkflowId } from "@/services/prisma"
 
 export async function GET(request: Request, { params }: any) {
 	const id = params.id as string
+	const { searchParams } = new URL(request.url)
+
+	const taskSkip = Number(searchParams.get("taskSkip") ?? 0)
+	const taskTake = Number(searchParams.get("taskTake") ?? 25)
+	const taskSearch = searchParams.get("taskSearch") ?? undefined
+
 	try {
 		const workflow = await WorkflowById(id)
+		const { tasks, totalCount } = await TasksByWorkflowId(id, {
+			skip: taskSkip,
+			take: taskTake,
+			search: taskSearch,
+		})
 
 		return NextResponse.json({
 			workflow: workflow,
-			tasks: workflow?.tasks ?? [],
+			tasks: tasks,
+			taskCount: totalCount,
 			progress: workflow?.progress,
 		})
 	} catch (e: any) {

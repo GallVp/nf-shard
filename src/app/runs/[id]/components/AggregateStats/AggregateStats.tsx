@@ -1,55 +1,27 @@
 "use client"
 
 import { clsx } from "clsx"
-import { Task } from "@prisma/client"
-import { useMemo } from "react"
-import { formatDifference, formatDuration } from "@common/utils/index"
-import moment from "moment"
+import { formatDifference } from "@common/utils/index"
 import { TimerDisplayDynamic } from "@/app/components"
+import { TaskAggregate } from "@/services/prisma"
 const bytes = require("bytes")
 
 type AggregateStatsProps = {
-	tasks: Task[]
+	aggregate: TaskAggregate
 	startedAt?: Date | null
 	completedAt?: Date | null
 	className?: string
 }
 
-type Stats = {
-	cpuTime: number
-	totalMemory: number
-	storageRead: number
-	storageWrite: number
-	estimatedCostUsd: number
-}
+const AVERAGE_COST_PER_CPU_HOUR_USD = 0.1
 
 export const AggregateStats: React.FC<AggregateStatsProps> = ({
-	tasks,
+	aggregate,
 	completedAt,
 	startedAt,
 	className,
 }: AggregateStatsProps) => {
-	const aggregates = useMemo(() => {
-		let aggr: Stats = {
-			cpuTime: 0,
-			totalMemory: 0,
-			storageRead: 0,
-			storageWrite: 0,
-			estimatedCostUsd: 0,
-		}
-
-		for (const task of tasks) {
-			aggr.cpuTime += (task?.data.cpus * (task?.data?.realtime ?? 0)) / (3600 * 1000)
-			aggr.totalMemory += task?.data.rss ?? 0
-			aggr.storageRead += task?.data.rchar ?? 0
-			aggr.storageWrite += task?.data.wchar ?? 0
-		}
-
-		return aggr
-	}, [tasks])
-
-	const averageCostPerCpuHour = 0.1
-	const costEstimate = aggregates.cpuTime * averageCostPerCpuHour
+	const costEstimate = aggregate.cpuTimeHours * AVERAGE_COST_PER_CPU_HOUR_USD
 
 	return (
 		<div>
@@ -63,24 +35,26 @@ export const AggregateStats: React.FC<AggregateStatsProps> = ({
 				</div>
 				<div className="overflow-hidden rounded-md bg-white px-4 py-5 shadow h-24">
 					<dt className="truncate text-sm font-medium text-gray-500">CPU time</dt>
-					<dd className="mt-1 text-xl font-semibold tracking-tight text-gray-900">{aggregates.cpuTime.toFixed(2)} h</dd>
+					<dd className="mt-1 text-xl font-semibold tracking-tight text-gray-900">
+						{aggregate.cpuTimeHours.toFixed(2)} h
+					</dd>
 				</div>
 				<div className="overflow-hidden rounded-md bg-white px-4 py-5 shadow h-24">
 					<dt className="truncate text-sm font-medium text-gray-500">Total Memory</dt>
 					<dd className="mt-1 text-xl font-semibold tracking-tight text-gray-900">
-						{bytes(aggregates.totalMemory, { unitSeparator: " " })}
+						{bytes(aggregate.totalMemory, { unitSeparator: " " })}
 					</dd>
 				</div>
 				<div className="overflow-hidden rounded-md bg-white px-4 py-5 shadow h-24">
 					<dt className="truncate text-sm font-medium text-gray-500">Storage Read</dt>
 					<dd className="mt-1 text-xl font-semibold tracking-tight text-gray-900">
-						{bytes(aggregates.storageRead, { unitSeparator: " " })}
+						{bytes(aggregate.storageRead, { unitSeparator: " " })}
 					</dd>
 				</div>
 				<div className="overflow-hidden rounded-md bg-white px-4 py-5 shadow h-24">
 					<dt className="truncate text-sm font-medium text-gray-500">Storage Write</dt>
 					<dd className="mt-1 text-xl font-semibold tracking-tight text-gray-900">
-						{bytes(aggregates.storageWrite, { unitSeparator: " " })}
+						{bytes(aggregate.storageWrite, { unitSeparator: " " })}
 					</dd>
 				</div>
 				<div className="overflow-hidden rounded-md bg-white px-4 py-5 shadow h-24">
