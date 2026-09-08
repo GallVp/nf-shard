@@ -86,8 +86,10 @@ export const MainRun = (props: PageProps) => {
 	useEffect(() => {
 		const previousTasks = tasksRef.current
 		if (previousTasks) {
+			const previousTasksById = new Map(previousTasks.map((t) => [t.id, t]))
+
 			tasks.forEach((currentTask) => {
-				const prevTask = previousTasks.find((t) => t.id === currentTask.id)
+				const prevTask = previousTasksById.get(currentTask.id)
 
 				if (!prevTask) {
 					return
