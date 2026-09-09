@@ -1,21 +1,26 @@
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import {
 	createColumnHelper,
 	flexRender,
 	getCoreRowModel,
-	getFilteredRowModel,
-	getPaginationRowModel,
 	getSortedRowModel,
+	SortingState,
 	useReactTable,
 } from "@tanstack/react-table"
-import { Container, StatusTag, TaskStatusTag } from "@/app/components"
-import { formatDuration, fullDateTime } from "@/common"
+import { Container, TaskStatusTag } from "@/app/components"
+import { formatDuration, fullDateTime, MIN_TASK_SEARCH_LENGTH } from "@/common"
 import { Task } from "@prisma/client"
 import bytes from "bytes"
-import { FaCaretDown } from "react-icons/fa"
 
 type TasksTableProps = {
 	tasks: Task[]
+	taskCount: number
+	pageIndex: number
+	pageSize: number
+	search: string
+	onPageChange: (pageIndex: number) => void
+	onPageSizeChange: (pageSize: number) => void
+	onSearchChange: (search: string) => void
 	className?: string
 	onTaskClick: (task: Task) => void
 }
@@ -36,27 +41,11 @@ const columns = [
 		id: "duration",
 		header: "Duration",
 		cell: (info) => formatDuration(info.getValue(), "ms"),
-		footer: ({ table }) => {
-			let rows = table.getFilteredRowModel().rows
-			let msSum = 0.0
-			for (let i = 0; i < rows.length; i++) {
-				msSum += (rows[i].getValue("duration") as number) ?? 0
-			}
-			return formatDuration(msSum, "ms")
-		},
 	}),
 	columnHelper.accessor((row) => row.data.realtime, {
 		id: "realtime",
 		header: "Realtime",
 		cell: (info) => formatDuration(info.getValue(), "ms"),
-		footer: ({ table }) => {
-			let rows = table.getFilteredRowModel().rows
-			let msSum = 0.0
-			for (let i = 0; i < rows.length; i++) {
-				msSum += (rows[i].getValue("realtime") as number) ?? 0
-			}
-			return formatDuration(msSum, "ms")
-		},
 	}),
 	columnHelper.accessor((row) => row.data.pcpu, {
 		id: "pcpu",
@@ -124,28 +113,59 @@ const columns = [
 	}),
 ]
 
-export const TasksTable = ({ tasks, className, onTaskClick }: TasksTableProps) => {
+export const TasksTable = ({
+	tasks,
+	taskCount,
+	pageIndex,
+	pageSize,
+	search,
+	onPageChange,
+	onPageSizeChange,
+	onSearchChange,
+	className,
+	onTaskClick,
+}: TasksTableProps) => {
 	const data = useMemo(() => tasks, [tasks])
-	const [globalFilter, setGlobalFilter] = useState("")
+	const [searchInput, setSearchInput] = useState(search)
+	const [sorting, setSorting] = useState<SortingState>([])
+
+	useEffect(() => {
+		setSearchInput(search)
+	}, [search])
+
+	useEffect(() => {
+		const term = searchInput.trim()
+
+		if (term === search.trim() || (term.length > 0 && term.length < MIN_TASK_SEARCH_LENGTH)) {
+			return
+		}
+
+		const timeoutId = setTimeout(() => {
+			onSearchChange(term)
+		}, 300)
+
+		return () => clearTimeout(timeoutId)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [searchInput])
+
+	const pageCount = Math.max(Math.ceil(taskCount / pageSize), 1)
 
 	const table = useReactTable({
 		data,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		globalFilterFn: "includesString",
+		manualPagination: true,
+		manualFiltering: true,
+		pageCount,
 		state: {
-			globalFilter,
+			pagination: { pageIndex, pageSize },
+			sorting,
 		},
-		onGlobalFilterChange: setGlobalFilter,
-		initialState: {
-			pagination: {
-				pageSize: 25,
-			},
-		},
+		onSortingChange: setSorting,
 	})
+
+	const isSearchTooShort = searchInput.trim().length > 0 && searchInput.trim().length < MIN_TASK_SEARCH_LENGTH
 
 	return (
 		<Container
@@ -158,9 +178,9 @@ export const TasksTable = ({ tasks, className, onTaskClick }: TasksTableProps) =
 							id="search"
 							name="search"
 							type="text"
-							value={globalFilter}
-							onChange={(e) => setGlobalFilter(e.target.value)}
-							placeholder="Search status, process, tag"
+							value={searchInput}
+							onChange={(e) => setSearchInput(e.target.value)}
+							placeholder={`Search status, process, tag (min ${MIN_TASK_SEARCH_LENGTH} letters)`}
 							className="peer block w-64 border-0 bg-gray-50 py-1.5 text-gray-900 focus:ring-0 sm:text-sm sm:leading-6"
 						/>
 						<div
@@ -168,6 +188,9 @@ export const TasksTable = ({ tasks, className, onTaskClick }: TasksTableProps) =
 							className="absolute inset-x-0 bottom-0 border-t border-gray-300 peer-focus:border-t-2 peer-focus:border-indigo-600"
 						/>
 					</div>
+					{isSearchTooShort && (
+						<div className="text-xs text-gray-400 pt-1">Type at least {MIN_TASK_SEARCH_LENGTH} letters to search</div>
+					)}
 				</div>
 			}
 		>
@@ -217,63 +240,46 @@ export const TasksTable = ({ tasks, className, onTaskClick }: TasksTableProps) =
 							</tr>
 						))}
 					</tbody>
-					<tfoot className="border-solid border-t-[1px] border-gray-100">
-						{table.getFooterGroups().map((footerEl) => (
-							<tr key={footerEl.id}>
-								{footerEl.headers.map((columnEl) => (
-									<th className="text-sm" key={columnEl.id} colSpan={columnEl.colSpan}>
-										{flexRender(columnEl.column.columnDef.footer, columnEl.getContext())}
-									</th>
-								))}
-							</tr>
-						))}
-					</tfoot>
 				</table>
 			</div>
 
 			<div className="flex items-center justify-between pt-3 text-xs text-gray-500">
 				<div>
 					Showing{" "}
-					{table.getFilteredRowModel().rows.length === 0
-						? 0
-						: table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
+					{taskCount === 0 ? 0 : pageIndex * pageSize + 1}
 					{"-"}
-					{Math.min(
-						(table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-						table.getFilteredRowModel().rows.length
-					)}{" "}
-					of {table.getFilteredRowModel().rows.length} tasks
+					{Math.min((pageIndex + 1) * pageSize, taskCount)} of {taskCount} tasks
 				</div>
 
 				<div className="flex items-center gap-2">
 					<select
-						value={table.getState().pagination.pageSize}
-						onChange={(e) => table.setPageSize(Number(e.target.value))}
+						value={pageSize}
+						onChange={(e) => onPageSizeChange(Number(e.target.value))}
 						className="border-gray-300 rounded text-xs"
 					>
-						{[25, 50, 100, 250].map((pageSize) => (
-							<option key={pageSize} value={pageSize}>
-								{pageSize} / page
+						{[25, 50, 100, 250].map((size) => (
+							<option key={size} value={size}>
+								{size} / page
 							</option>
 						))}
 					</select>
 
 					<button
 						className="px-2 py-1 border border-gray-300 rounded disabled:opacity-50"
-						onClick={() => table.previousPage()}
-						disabled={!table.getCanPreviousPage()}
+						onClick={() => onPageChange(pageIndex - 1)}
+						disabled={pageIndex <= 0}
 					>
 						Previous
 					</button>
 
 					<span>
-						Page {table.getState().pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+						Page {pageIndex + 1} of {pageCount}
 					</span>
 
 					<button
 						className="px-2 py-1 border border-gray-300 rounded disabled:opacity-50"
-						onClick={() => table.nextPage()}
-						disabled={!table.getCanNextPage()}
+						onClick={() => onPageChange(pageIndex + 1)}
+						disabled={pageIndex + 1 >= pageCount}
 					>
 						Next
 					</button>
