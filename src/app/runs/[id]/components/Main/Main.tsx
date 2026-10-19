@@ -24,8 +24,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { SlideOver, Spinner } from "@/app/components"
 import { workflowStatus } from "@/common/index"
 import { LogsContainer } from "@/app/components/LogsContainer/LogsContainer"
-import { useSubscription } from "urql"
-import { Log, StreamLogsDocument } from "@/generated/graphql/graphql"
 import { TaskAggregate } from "@/services/prisma"
 
 const DEFAULT_TASK_PAGE_SIZE = 25
@@ -55,11 +53,6 @@ export const MainRun = (props: PageProps) => {
 	const tasksRef = useRef<Task[]>()
 	const shouldPoll = useRef<boolean>(true)
 	const [selectedTask, setselectedTask] = useState<Task | undefined>()
-	const [newLogSub] = useSubscription({
-		query: StreamLogsDocument,
-		variables: { runName: workflow.runName },
-	})
-	const [logs, setLogs] = useState<Log[]>([])
 
 	const status = useMemo(() => {
 		return workflowStatus(workflow)
@@ -162,15 +155,6 @@ export const MainRun = (props: PageProps) => {
 		tasksRef.current = tasks
 	}, [tasks])
 
-	useEffect(() => {
-		console.log("sub", newLogSub)
-		if (newLogSub.data) {
-			const log = newLogSub.data.streamLogs
-			setLogs((prev) => [...prev, log])
-			console.log(log.message)
-		}
-	}, [newLogSub, workflow.runName])
-
 	const tabs = [
 		{
 			name: "Command",
@@ -190,7 +174,7 @@ export const MainRun = (props: PageProps) => {
 		},
 		{
 			name: "Logs",
-			content: <LogsContainer logs={logs} />,
+			content: <LogsContainer workflowId={workflow.id} />,
 		},
 	]
 	return (

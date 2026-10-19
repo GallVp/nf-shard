@@ -21,6 +21,8 @@ services:
   nextjs:
     container_name: nf-shard-nextjs
     build: .
+    volumes:
+      - $NXF_HOME:$NXF_HOME:ro
     platform: linux/amd64
     environment:
       POSTGRES_URI: ${POSTGRES_URI:?}
@@ -30,6 +32,11 @@ services:
       APP_PASSWORD: ${APP_PASSWORD:?}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       HOSTNAME: "0.0.0.0"
+      LOCAL_STORAGE_ROOT: ${LOCAL_STORAGE_ROOT:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
     ports:
       - 3000:3000
     profiles:

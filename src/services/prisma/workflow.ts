@@ -26,6 +26,17 @@ export const WorkflowById = async (id: string, includeWorkspace?: boolean) => {
 	return workflow
 }
 
+export const TaskByWorkflowAndTaskId = async (workflowId: string, taskId: number) => {
+	return prisma.task.findUnique({
+		where: {
+			workflowId_taskId: {
+				workflowId,
+				taskId,
+			},
+		},
+	})
+}
+
 const TASK_SEARCH_FIELDS = ["status", "process", "tag", "hash", "name", "container", "nativeId"] as const
 
 const taskSearchCondition = (term: string) => {

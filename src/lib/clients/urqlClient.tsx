@@ -4,9 +4,13 @@ import { Client, Provider, cacheExchange, fetchExchange, subscriptionExchange } 
 
 import { SubscriptionClient } from "subscriptions-transport-ws"
 
-const wsClient = new SubscriptionClient("ws://localhost:4001/query", {
-	reconnect: true,
-})
+const wsClient =
+	typeof window !== "undefined"
+		? new SubscriptionClient("ws://localhost:4001/query", {
+				reconnect: false,
+				lazy: true,
+		  })
+		: null
 
 export const client = new Client({
 	url: "http://localhost:4002/query",
@@ -14,9 +18,13 @@ export const client = new Client({
 		// cacheExchange,
 		fetchExchange,
 
-		subscriptionExchange({
-			forwardSubscription: (request) => wsClient.request(request),
-		}),
+		...(wsClient
+			? [
+					subscriptionExchange({
+						forwardSubscription: (request) => wsClient.request(request),
+					}),
+			  ]
+			: []),
 	],
 })
 

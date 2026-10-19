@@ -1,16 +1,61 @@
-import { Container } from "@/app/components"
+import { Container, Spinner } from "@/app/components"
 import { Task } from "@prisma/client"
-import React from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { CodeText } from ".."
 import { formatDuration, fullDateTime } from "@/common"
 import bytes from "bytes"
 import Link from "next/link"
+import type { TaskLogsResponse } from "@/app/api/runs/[id]/tasks/[taskId]/logs/route"
 
 type TaskDetailsProps = {
 	task: Task
 }
 
+type LogTabKey = "commandLog" | "commandOut" | "commandErr"
+
+const LOG_TABS: { key: LogTabKey; label: string }[] = [
+	{ key: "commandLog", label: ".command.log" },
+	{ key: "commandOut", label: ".command.out (stdout)" },
+	{ key: "commandErr", label: ".command.err (stderr)" },
+]
+
 export const TaskDetails = ({ task }: TaskDetailsProps) => {
+	const [logsData, setLogsData] = useState<TaskLogsResponse | null>(null)
+	const [logsLoading, setLogsLoading] = useState<boolean>(false)
+	const [activeLogTab, setActiveLogTab] = useState<LogTabKey>("commandLog")
+
+	const fetchTaskLogs = useCallback(async () => {
+		setLogsLoading(true)
+		try {
+			const res = await fetch(`/api/runs/${task.workflowId}/tasks/${task.taskId}/logs`, {
+				cache: "no-store",
+			})
+			if (res.ok) {
+				const data: TaskLogsResponse = await res.json()
+				setLogsData(data)
+				if (task.data.status === "FAILED" && data.commandErr?.content) {
+					setActiveLogTab("commandErr")
+				} else if (data.commandLog?.content) {
+					setActiveLogTab("commandLog")
+				} else if (data.commandOut?.content) {
+					setActiveLogTab("commandOut")
+				} else if (data.commandErr?.content) {
+					setActiveLogTab("commandErr")
+				}
+			}
+		} catch (e) {
+			console.error("Failed to fetch task logs", e)
+		} finally {
+			setLogsLoading(false)
+		}
+	}, [task.workflowId, task.taskId, task.data.status])
+
+	useEffect(() => {
+		fetchTaskLogs()
+	}, [fetchTaskLogs])
+
+	const selectedLog = logsData ? logsData[activeLogTab] : null
+
 	return (
 		<div className="text-black">
 			{task.data.executor === "float" && (
@@ -36,6 +81,66 @@ export const TaskDetails = ({ task }: TaskDetailsProps) => {
 			<div className="pt-6">
 				<div className="text-lg">Command</div>
 				<CodeText code={task.data.script ?? ""} />
+			</div>
+
+			<div className="pt-6">
+				<div className="flex items-center justify-between">
+					<div className="text-lg">Execution Logs</div>
+					<button
+						type="button"
+						onClick={fetchTaskLogs}
+						disabled={logsLoading}
+						className="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+					>
+						{logsLoading ? "Loading..." : "Refresh"}
+					</button>
+				</div>
+
+				<div className="mt-2 flex space-x-2 border-b border-gray-200 pb-2">
+					{LOG_TABS.map((tab) => {
+						const hasContent = !!logsData?.[tab.key]?.content
+						const isSelected = activeLogTab === tab.key
+						return (
+							<button
+								key={tab.key}
+								type="button"
+								onClick={() => setActiveLogTab(tab.key)}
+								className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+									isSelected
+										? "bg-indigo-100 text-indigo-700"
+										: "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+								}`}
+							>
+								{tab.label}
+								{hasContent && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />}
+							</button>
+						)
+					})}
+				</div>
+
+				<div className="mt-2">
+					{logsLoading && !logsData ? (
+						<div className="flex items-center space-x-2 py-4 text-sm text-gray-500">
+							<Spinner />
+							<span>Loading task logs...</span>
+						</div>
+					) : selectedLog ? (
+						<div>
+							{selectedLog.truncated && (
+								<div className="mb-1 text-xs text-amber-600">
+									Showing last 512 KB of {selectedLog.source}
+								</div>
+							)}
+							<pre className="max-h-96 overflow-auto rounded-md bg-gray-900 p-3 font-mono text-xs text-gray-100 whitespace-pre-wrap break-words">
+								{selectedLog.content || "(empty file)"}
+							</pre>
+						</div>
+					) : (
+						<div className="rounded-md bg-gray-50 p-3 text-xs text-gray-500">
+							No {LOG_TABS.find((t) => t.key === activeLogTab)?.label} file found in work directory.
+						</div>
+					)}
+				</div>
 			</div>
 
 			<div className="pt-6">
